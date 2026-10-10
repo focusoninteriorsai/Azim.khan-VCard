@@ -1,67 +1,116 @@
-# Azim Khan · FocusOn Interiors
+# Azim Khan · Digital Visiting Card
 
-A static, responsive digital visiting card. No framework, build step, API, or runtime package installation. All application CSS and JavaScript, the portrait, the brand mark, and the QR generator are embedded in `index.html`. The local asset copies are supplied for reuse and editing.
+The complete vCard for **Azim Khan — Chief Executive Officer, FocusOn Interiors**: one static page, no framework,
+no build step, no runtime dependencies.
+
+The design system, layout, motion and behaviour are a **1:1 port of the sibling Sarim Khan card**
+(`focusoninteriorsai.github.io/Sarim.Khan-VCard`) — same palette, type pairing, section order, cards and effects —
+re-populated with Azim's identity, company metrics and contact channels.
+
+## Files
+
+| Path | Purpose |
+| --- | --- |
+| `index.html` | The whole card: markup, CSS and JS in one file (~69 KB). |
+| `logo.png` | FocusOn mark — favicon, intro animation, hero brand, footer, and embedded in the saved `.vcf`. |
+| `assets/azim-khan.jpg` | Portrait used in the hero and embedded (downscaled) in the `.vcf`. |
+| `assets/profile.png` | Original portrait source (RGBA, 636 × 1200). Not fetched by the page — kept for re-exporting the JPEG. |
+| `assets/clients/` | 26 client logos used by the "Marquee Accounts" strips. |
+| `assets/vendor/qrcode.js` | Vendored `qrcode-generator` 2.0.4 (MIT) — renders the contact QR fully offline. |
+
+## Features
+
+- Intro: FocusOn logo animation (~2 s, CSS only) over an ambient drifting-gradient background
+- Hero: portrait with 3D pointer tilt, floating stat badges, gradient wordmark, pulse kicker, meta chips
+- Four stat cards that count up when scrolled into view (company results, not personal claims)
+- About + FocusOn model · C.Q.E.T. standard · six services · sector pills · six project cards · two-row client marquee (pauses on hover, second row reverses)
+- Cursor spotlight on every card, scroll-reveal on every block, scroll progress bar
+- Contact tiles, head-office card with Google Maps link, and an offline QR that saves the contact
+- **Save Contact** → standard vCard 3.0 `.vcf` with `PHOTO`/`LOGO`, RFC-2426 octet folding, CRLF line endings
+- **Share** → native share sheet, copies the link where unsupported (falls back to the deployed URL on `file://`)
+- Sticky quick-action dock, toast feedback, `prefers-reduced-motion` support, skip link, focus rings
+- Responsive at 960 / 640 / 380 px; works from `file://` except for the fonts and icons (see below)
 
 ## Run
 
-Open `index.html` directly, or from this directory run:
-
-```sh
-python3 -m http.server 8000 --bind 0.0.0.0
+```bash
+python3 -m http.server 8000 --bind 0.0.0.0   # open http://localhost:8000
 ```
 
-Visit `http://localhost:8000`. Deploy the directory unchanged to GitHub Pages, Netlify, Vercel, or any static host.
-
-Google Fonts (Outfit/Inter) and Font Awesome load from CDNs when online. Offline, system fonts take over; text labels keep controls usable without icon fonts. Contact download and QR generation are completely offline. External websites, calls, WhatsApp, and email require the relevant connection/device apps.
+or just open `index.html`. Deploy the directory unchanged to GitHub Pages / Netlify / Vercel.
+Google Fonts (Outfit, Inter) and Font Awesome 6.5.2 load from CDNs; offline, system fonts take over and the text
+labels keep every control usable. `.vcf` export and QR generation never touch the network.
 
 ## Update details
 
-Find `const CONTACT =` near the first script in `index.html`. Update name, separate first/last names, title, company/legal name, phone, display phone, WhatsApp, email, URLs, and structured address there. The displayed identity, contact links, downloads, and QR all use this object. Keep phone numbers in international format. Contact channels currently belong to the **company**, not a verified personal line for Azim.
+All machine-readable identity lives in the `CONTACT` object in the last `<script>` of `index.html` — name, split
+first/last, title, org, legal name, phone, WhatsApp, email, URLs, photo, logo and address. It feeds the `.vcf`, the
+QR and the share payload; the visible prose in each section is plain HTML and is edited separately. Keep phone numbers
+in international format.
 
-Set `cardUrl` to this card's public HTTPS URL after deployment. Otherwise Share uses the current page URL; when opened as a local file it falls back to the company website rather than sharing a private filesystem path. Native sharing requires browser support; clipboard and a manual-copy prompt provide fallbacks.
+`CARD_URL` (same script) is the deployed address, used only when the page is opened from `file://`. Point
+`og:image` at the absolute deployed URL if you move hosts — most crawlers ignore relative ones.
 
-Editorial paragraphs, company statistics, project cards, regional office labels, and service descriptions are plain HTML. Update those separately when the company changes. Client names live in `clientNames`. Brand colors are CSS variables in `:root`.
+**Client marquee.** Entries live in the `clients` array: `{ name, file }` renders `assets/clients/<file>`, and
+`{ name, file: null }` renders a typographic tile in the Outfit face (used where no approved logo file exists —
+L&T Finance, Centricity, Emversity, Navu). Both rows are generated from one list and duplicated so the
+`translateX(-50%)` loop is seamless.
 
-## Replace portrait / logo
+**Portrait.** Replace `assets/profile.png` and re-export the served JPEG:
 
-Replace `assets/profile.png` and `logo.png` with your approved PNGs (square logo recommended). To preserve standalone/offline behavior, update the `photo` and `logo` data URLs in CONTACT, not just `photoPath` / `logoPath` (those document the source assets). The favicon contains the same embedded logo. This optional one-time Python command synchronizes all three automatically; it is an editing aid, **not a build requirement**:
-
-```sh
-python3 - <<'PY'
-import base64, re
-from pathlib import Path
-p = Path('index.html')
-s = p.read_text()
-for key, source in [('photo', 'assets/profile.png'), ('logo', 'logo.png')]:
-    data = 'data:image/png;base64,' + base64.b64encode(Path(source).read_bytes()).decode()
-    s = re.sub(r"\b" + key + r":'data:image/png;base64,[^']*'", key + ":'" + data + "'", s)
-    if key == 'logo':
-        s = re.sub(r'(<link rel="icon" href=")[^"]*(")', lambda m: m[1] + data + m[2], s)
-p.write_text(s)
-PY
+```bash
+python3 -c "
+from PIL import Image
+im = Image.open('assets/profile.png')
+bg = Image.new('RGB', im.size, (255, 255, 255)); bg.paste(im, mask=im.split()[-1])
+bg.save('assets/azim-khan.jpg', quality=88, optimize=True, progressive=True, subsampling=1)"
 ```
 
-The export includes a folded vCard 3.0 `PHOTO` and `LOGO`; whether they are displayed depends on the importing contacts app. QR encodes a smaller, image-free vCard with the same identity, phone, email, address, and URLs. Scanning opens a contact preview/import prompt on compatible devices; users must confirm saving. It cannot silently save a contact.
+Needs `pip install pillow`. The white matte is deliberate: the hero crops the portrait into a 4:5 frame with a dark
+name plate over the lower edge, so a transparent background would show through.
 
-For public link previews, change `og:image` to the **absolute deployed URL** of `assets/profile.png`; most crawlers require absolute URLs. Update title and description metadata when changing the identity.
-
-## Sources and content choices
+## Sources, and what is deliberately *not* claimed
 
 Reference material reviewed on 10 October 2026:
 
-- https://focusoninteriors.com/ — official brand and tagline.
-- https://focusoninteriors.com/team/ — confirms Azim Khan's CEO role and leadership description.
-- https://roushan62.github.io/FocusOn/about/ — company services, positioning, projects, and clients.
-- https://roushan62.github.io/FocusOn/contact/ — published company contact channels/offices.
-- https://github.com/roushan62/FocusOn — reference site's `lib/data.ts` supplies legal entity, numerical counter targets (15M+ sq. ft., 300+ projects, 8+ company years, 250+ people), structured office address, and services; `public/images` supplies the real portrait and logo.
-- https://in.linkedin.com/in/azim-khan-1424561a9 — user-provided profile link, retained as supplied. Automated reading was blocked; no personal claims were inferred from it.
+- <https://focusoninteriors.com/> and `/team/` — brand, tagline, CEO role and leadership description.
+- <https://github.com/roushan62/FocusOn> — company services, sectors, office address, and the metrics 15 M+ sq. ft.,
+  300+ projects, 8+ years, 250+ people.
+- <https://github.com/focusoninteriorsai/Sarim.Khan-VCard> — this card's design system, the C.Q.E.T. framing, the
+  service list, the client logo set, and the Max Life / Compass Group / Krsnaa Diagnostics engagements.
+- <https://in.linkedin.com/in/azim-khan-1424561a9> — profile link as supplied; automated reading was blocked, so
+  nothing was inferred from it.
 
-Company statistics are labeled as company results, not personal achievements. No unsupported certification, founding date, personal phone, or personal email was added. The methodology is the company's published quality pillars, not a certification.
+Boundaries kept from the previous revision of this card:
 
-Project photography and original client logo downloads were inaccessible in this environment. Project cards intentionally use editorial geometric graphics rather than fabricated project photos. The marquee uses clearly typographic client-name treatments, not purported official logo artwork; matching editable SVG copies are in `assets/clients`. Replace with approved client logos if available (and update the inline image generation if standalone support is needed). Please confirm permission for brand/portrait/client use before public deployment.
+- `+91 99 1025 8820` and `info@focusoninterior.in` are **company** channels and are labelled as such in the UI and in
+  the `.vcf`; there is no verified personal number for Azim.
+- The four stat cards and the badge figures are **company** results, phrased that way, not personal achievements.
+- No education, certifications, founding year, awards, testimonials or personal biography were invented. The portrait
+  badge reads "Official" (issued by the company's own repo) rather than "Verified".
+- Project cards carry area and scope only — where a ₹ value was not published, none was manufactured.
+- The L&T Finance, Luminous and Emversity figures come from this repo's earlier revision; the three extra project
+  cards are company engagements credited to the FocusOn team, not to Azim personally.
 
-## QR dependency & checks
+Client logos are reused from the sibling FocusOn repo, i.e. from the same owner. **Confirm permission for client,
+brand and portrait use before public deployment.**
 
-`assets/vendor/qrcode.js` is qrcode-generator **2.0.4**, copyright Kazuhiko Arase, MIT licensed; upstream license notice is retained in both the vendored and embedded copies. No CDN or service is involved in QR creation.
+## Checks run
 
-Checked with a JavaScript DOM harness: offline script execution, rendered QR SVG, populated contact links, embedded photo/logo, vCard fields, escaping, CRLF termination, and 75-byte line folding. Browser automation could not be run because downloading the browser was blocked by the environment's network policy. Before publication, test the page on desktop/mobile, scan the QR with a real phone, and import the VCF in your intended contacts app.
+Verified in a jsdom harness (`IntersectionObserver`, `fetch` and a stubbed canvas/image pipeline supplied by the test,
+since jsdom decodes nothing): 48 structural and behaviour assertions pass, plus 7 more covering the canvas path —
+- section counts (4 stats, 4 C.Q.E.T., 6 services, 9 sectors, 6 projects, 6 contact tiles, 40 reveal blocks),
+  marquee tiles (2 × 30), every referenced logo file exists on disk, QR renders as an SVG with modules,
+  all three Save / two Share handlers bind, no `Sarim`-era data leaks through, and reduced-motion resolves to
+  visible content with counters at their targets with zero console errors;
+- the generated `.vcf` parses to the expected `N`/`FN`/`ORG`/`TITLE`/`TEL`/`EMAIL`/`ADR` (comma-escaped)/`URL`/
+  `X-SOCIALPROFILE`/`CATEGORIES`/`NOTE` fields, ends `END:VCARD` with CRLF terminators, folds every line to ≤ 75
+  octets, and its `PHOTO` payload round-trips byte-for-byte after unfolding.
+
+Two bugs inherited from the reference implementation were fixed rather than copied: its line-folder rebuilds the
+string on every fold (quadratic: on this 454 KB portrait it churned enough to exhaust a 1.9 GB heap in testing), and an image
+that neither loads nor errors could hang the Save button forever — `imageData()` now races a timeout and ships a lighter `.vcf` instead.
+The portrait is also redrawn through a canvas to 512 px JPEG before embedding, so contacts apps get a light payload.
+
+Browser automation could not run in this environment (browser downloads are blocked). Before publication, open the page
+on desktop and mobile, scan the QR with a real phone, and import the `.vcf` in your intended contacts app.
